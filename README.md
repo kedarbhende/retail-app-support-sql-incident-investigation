@@ -1,31 +1,22 @@
-# retail-app-support-sql-incident-investigation
+# Retail Application Support — SQL Incident Investigation
 
-A practice project for application support work. I built a synthetic retail
-database with 5 planted incidents, then investigated each one with SQL:
-find evidence, identify root cause, fix or escalate, validate, document.
+Small SQLite retail DB (customers, stores, products, orders, order_items, payments, api_log, incidents) with 5 planted production incidents.
 
-- **Database (SQLite):** 8 tables (customers, stores, products, orders,
-  order_items, payments, api_log, incidents), ~330 orders, 120 customers
-- **`build_db.py`:** generates the data and plants the incidents
-- **`investigate.py`:** evidence and root-cause queries; `--fix` applies
-  fixes, prints before/after validation, and updates ticket status
-- **`rca/`:** written RCA documents
+## Run
+```
+python build_db.py          # creates retail_support.db (Python 3, stdlib only)
+python investigate.py       # evidence + root-cause queries for all 5 incidents
+python investigate.py --fix # apply fixes, validate before/after, close tickets
+```
 
 ## Incidents
-| ID | Symptom | Root cause | Class | Outcome |
-|----|---------|-----------|-------|---------|
-| 1001 | Paid, order stuck Pending | Webhook 504 timeout | Application | Fixed + validated |
-| 1002 | Customer charged twice | Gateway timeout + retry, no UNIQUE on txn_ref | Data/Payment | Fixed + validated |
-| 1003 | NULL/orphan customer_id | Guest checkout path, no FK | Data quality | Escalated |
-| 1004 | Total ≠ items × tax | Old 12% tax vs 18% config | Configuration | Fixed + validated |
-| 1005 | Delivered, no payment | Manual admin override | Process/user | Escalated |
+| ID | Symptom | Class | Root cause |
+|---|---|---|---|
+| 1001 | Paid, order Pending | Application | Webhook 504 timeout |
+| 1002 | Charged twice | Data / Payment | Retry after timeout, no UNIQUE txn_ref |
+| 1003 | NULL / orphan customer_id | Data quality | Guest checkout, no FK |
+| 1004 | Total ≠ items × tax | Configuration | Old 12% tax hardcoded (config = 18%) |
+| 1005 | Delivered, no payment | Process / user | Manual admin override |
 
-## SQL used
-JOINs, `LEFT JOIN … IS NULL` (orphans), `GROUP BY / HAVING` (duplicates,
-mismatches), `NOT EXISTS`, aggregates for recalculating totals.
-
-## How to run
-```
-python build_db.py
-python investigate.py
-python investigate.py --fix
+Flow: Incident → Investigation → SQL evidence → Root cause → Resolution → Validation → Closure.
+Full write-up example: `rca/INC-1001.md`. Try writing 1002–1005 yourself.
